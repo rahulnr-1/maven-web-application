@@ -1,0 +1,67 @@
+pipeline{
+agent any
+tools
+{
+maven 'maven3.6.3'
+}
+triggers{  
+pollSCM('* * * * *') 
+}
+
+options{
+timestamps()
+buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '5', daysToKeepStr: '', numToKeepStr: '5'))
+}
+
+  stages{
+	stage('Checkout')
+	{
+	steps{
+	git branch: 'development', credentialsId: '4943ad49-0209-4148-b4e6-e5d220fe970f', url: 'https://github.com/rahulnr-1/maven-web-application.git'
+	}
+   }
+   stage('Build')
+   {
+       steps{
+         sh "mvn clean package"
+       }
+   }
+   stage('ExecuteSonarQubeReport')
+   {
+    steps{
+	sh "mvn sonar:sonar"
+	}
+	}
+	stage('UploadArtifactIntoNexus')
+{
+    steps{
+	sh "mvn deploy"
+	}
+	}
+	stage('Deploy')
+{
+    steps{
+	sshagent(['b1e3cbe7-995d-4196-8220-a880bc362e4e']) {
+ sh "scp -o StrictHostKeyChecking=no target/maven-web-application.war ec2-user@13.127.123.22:/opt/apache-tomcat-9.0.41/webapps/"
+}
+	
+	}
+	}
+  }
+  
+//   post{
+		
+// 	success{
+// 		mail bcc: 'rahulsia362@gmail.com', body: '''SUCCESS............
+// regards,
+// rahulnr''', cc: 'rahulsia362@gmail.com', from: '', replyTo: '', subject: 'DEPLOY SUCCESS', to: 'rahulsia362@gmail.com'
+// 	}
+	
+// 	failure{
+// 		mail bcc: 'rahulsia362@gmail.com', body: '''Failure...
+// regards,
+// rahulnr''', cc: 'rahulsia362@gmail.com', from: '', replyTo: '', subject: 'DEPLOY SUCCESS', to: 'rahulsia362@gmail.com'
+// 	}
+// 	} 
+  
+}
